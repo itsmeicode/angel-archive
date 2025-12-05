@@ -1,0 +1,49 @@
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import time
+
+from app.config.settings import get_settings
+from app.routers import health
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application startup and shutdown events"""
+    yield
+
+
+settings = get_settings()
+
+app = FastAPI(
+    title="Angel Archive API",
+    description="Backend API for Angel Archive - Sonny Angel collection management",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics for health monitoring"""
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start) * 1000
+    health.record_request(duration_ms, response.status_code >= 400)
+    return response
+
+
+app.include_router(health.router)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the API"}
