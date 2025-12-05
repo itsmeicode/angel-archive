@@ -6,14 +6,17 @@ from contextlib import asynccontextmanager
 import time
 
 from app.config.settings import get_settings
-from app.routers import health, auth, angels, users, audit, export
+from app.routers import health, auth, angels, users, audit, export, jobs
 from app.middleware.rate_limiter import limiter
+from app.services.cron_manager import initialize_cron, shutdown_cron
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown events"""
+    initialize_cron()
     yield
+    shutdown_cron()
 
 
 settings = get_settings()
@@ -53,6 +56,7 @@ app.include_router(angels.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(export.router)
+app.include_router(jobs.router)
 
 
 @app.get("/")
