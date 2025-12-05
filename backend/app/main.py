@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import time
 
 from app.config.settings import get_settings
-from app.routers import health, auth
+from app.routers import health, auth, angels
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ async def metrics_middleware(request: Request, call_next):
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(angels.router)
 
 
 @app.get("/")
