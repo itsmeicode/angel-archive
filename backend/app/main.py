@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import time
 
 from app.config.settings import get_settings
-from app.routers import health, auth, angels, users, audit
+from app.routers import health, auth, angels, users, audit, export
 from app.middleware.rate_limiter import limiter
 
 
@@ -52,6 +52,7 @@ app.include_router(auth.router)
 app.include_router(angels.router)
 app.include_router(users.router)
 app.include_router(audit.router)
+app.include_router(export.router)
 
 
 @app.get("/")
