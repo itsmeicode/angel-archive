@@ -1,0 +1,72 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+.sonny-angel-card {
+  width: 100%;
+  padding: 8px;
+  background-color: pink;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease-in-out;
+}
+
+.sonny-angel-card:hover {
+  transform: scale(1.05);
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 8px;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.bookmark-options {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-btn {
+  background: transparent;
+  border: none;
+  color: #333;
+  font-size: 0.9rem;
+  padding: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.bookmark-btn:hover {
+  background: #f1f1f1;
+}
+
