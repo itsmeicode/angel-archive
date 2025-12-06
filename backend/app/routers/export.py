@@ -111,8 +111,16 @@ async def get_export_status(user_id: str) -> dict:
     can, message = can_export(user_id)
     last_export = export_timestamps.get(user_id)
     
+    # Calculate time remaining if rate limited
+    time_remaining = None
+    if not can and last_export:
+        time_since = datetime.utcnow() - last_export
+        remaining = timedelta(hours=1) - time_since
+        time_remaining = max(0, int(remaining.total_seconds() / 60))
+    
     return {
-        "can_export": can,
+        "canExport": can,  # camelCase for frontend
+        "timeRemaining": time_remaining,
         "message": message if not can else "Ready to export",
-        "last_export": last_export.isoformat() if last_export else None,
+        "lastExport": last_export.isoformat() if last_export else None,
     }
