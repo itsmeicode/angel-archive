@@ -1,6 +1,17 @@
 # Angel Archive
 A platform for Sonny Angel collectors to **track, trade, and showcase** their collections — designed with a focus on community, personalization, and visual presentation.
 
+## Table of Contents
+
+- [Why Angel Archive Exists](#why-angel-archive-exists)
+- [Technical Overview](#technical-overview)
+- [Image Service (Dynamic Opacity & Profile Images)](#image-service-dynamic-opacity--profile-images)
+- [Data Pipeline (Scraper)](#data-pipeline-scraper)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Quick Start](#quick-start)
+- [Architecture Diagram](#architecture-diagram)
+
 ---
 
 ## Why Angel Archive Exists
