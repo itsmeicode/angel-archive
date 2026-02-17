@@ -12,13 +12,13 @@ import time
 import sys
 
 PRODUCT_TYPE_URLS = {
-    "regular": ("Mini Figure (Regular)", "https://www.sonnyangel.com/en/products/"),
-    "gift": ("Mini Figure (Gift)", "https://www.sonnyangel.com/en/products/mini-figure-gift/"),
-    "hippers": ("Mini Figure (Hippers)", "https://www.sonnyangel.com/en/products/mini-figure-hippers/"),
-    "limited": ("Mini Figure (Limited)", "https://www.sonnyangel.com/en/products/mini-figure-limited/"),
-    "artist": ("Artist Collection", "https://www.sonnyangel.com/en/products/artist-collection/"),
-    "master": ("Master Collection", "https://www.sonnyangel.com/en/master-collection/"),
-    "others": ("Others", "https://www.sonnyangel.com/en/products/others/"),
+    "regular": ("Mini Figure (Regular)", "https://www.sonnyangel.com/en/products/")
+    # "gift": ("Mini Figure (Gift)", "https://www.sonnyangel.com/en/products/mini-figure-gift/"),
+    # "hippers": ("Mini Figure (Hippers)", "https://www.sonnyangel.com/en/products/mini-figure-hippers/"),
+    # "limited": ("Mini Figure (Limited)", "https://www.sonnyangel.com/en/products/mini-figure-limited/"),
+    # "artist": ("Artist Collection", "https://www.sonnyangel.com/en/products/artist-collection/"),
+    # "master": ("Master Collection", "https://www.sonnyangel.com/en/master-collection/"),
+    # "others": ("Others", "https://www.sonnyangel.com/en/products/others/"),
 }
 
 

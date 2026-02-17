@@ -27,7 +27,24 @@ class Settings(BaseSettings):
 
     @property
     def storage_base_url(self) -> str:
-        return f"{self.static_assets_url}/{self.bucket_name}"
+        """
+        Public base URL for Supabase Storage objects.
+
+        Supabase public object URLs use:
+          https://<ref>.supabase.co/storage/v1/object/public/<bucket>/<path>
+
+        This app historically configured STATIC_ASSETS_URL as:
+          https://<ref>.supabase.co/storage/v1
+        so we normalize it to include /object/public automatically.
+        """
+        base = (self.static_assets_url or "").rstrip("/")
+
+        # If user provided ".../storage/v1", upgrade to ".../storage/v1/object/public"
+        if base.endswith("/storage/v1") and "/storage/v1/object/public" not in base:
+            base = f"{base}/object/public"
+
+        # If user already provided ".../storage/v1/object/public", keep it.
+        return f"{base}/{self.bucket_name}".rstrip("/")
 
 
 @lru_cache

@@ -1,20 +1,8 @@
-#!/usr/bin/env python3
-"""
-Seed the database with series and angels from scraped images.
-
-Run from the backend directory:
-    python scripts/seed_database.py
-
-Expects images already uploaded to Supabase Storage.
-Reads series/angel structure from ../scraper/images/ directory.
-"""
-
 import os
 import sys
 import re
 from pathlib import Path
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
@@ -31,7 +19,6 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-# Paths relative to backend directory
 SCRAPER_DIR = Path(__file__).parent.parent.parent / "scraper"
 IMAGES_DIR = SCRAPER_DIR / "images"
 
@@ -44,21 +31,17 @@ def format_series_name(folder_name: str) -> str:
 def format_angel_name(filename: str) -> str:
     """Convert filename to angel name (e.g., 'Apple.png' -> 'Apple')."""
     name = Path(filename).stem
-    # Remove any numbering prefix if present
     name = re.sub(r"^\d+[-_]", "", name)
-    # Convert underscores to spaces
     name = name.replace("_", " ")
     return name
 
 
 def get_or_create_series(name: str) -> int:
     """Get existing series ID or create new series."""
-    # Check if exists
     result = supabase.table("series").select("id").eq("name", name).execute()
     if result.data:
         return result.data[0]["id"]
     
-    # Create new
     result = supabase.table("series").insert({"name": name}).execute()
     if result.data:
         print(f"  Created series: {name}")
@@ -110,7 +93,6 @@ def main():
     angel_count = 0
     skipped_count = 0
     
-    # Process each series folder
     for series_folder in sorted(IMAGES_DIR.iterdir()):
         if not series_folder.is_dir():
             continue
@@ -121,7 +103,6 @@ def main():
         series_id = get_or_create_series(series_name)
         series_count += 1
         
-        # Process each angel image in the series
         for image_file in sorted(series_folder.glob("*.png")):
             angel_name = format_angel_name(image_file.name)
             

@@ -1,7 +1,3 @@
--- Angel Archive - Complete Database Schema
--- For use with Supabase (PostgreSQL + Auth)
-
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =====================================================

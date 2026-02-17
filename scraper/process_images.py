@@ -25,14 +25,8 @@ def convert_to_grayscale(img: Image.Image) -> Image.Image:
     return img.convert("L").convert("RGBA")
 
 
-def convert_to_circular(
-    img: Image.Image,
-    crop_width: int = 1000,
-    crop_height: int = 2000,
-    zoom_factor: float = 0.5,
-    y_shift: int = -200
-) -> Image.Image:
-    """Create circular cropped version for profile pictures."""
+def convert_to_circular(img: Image.Image, crop_width: int = 1000, crop_height: int = 1000, zoom_factor: float = 0.5, y_shift: int = -300) -> Image.Image:
+    img = img.convert("RGBA")
     img_width, img_height = img.size
 
     x_center = img_width // 2
@@ -58,15 +52,15 @@ def convert_to_circular(
 
     circular_img = Image.new("RGBA", (zoomed_width, zoomed_height), (0, 0, 0, 0))
     circular_img.paste(cropped_img, (0, 0), mask)
-    circular_img = circular_img.resize((crop_width, crop_height), Image.LANCZOS)
 
+    circular_img = circular_img.resize((crop_width, crop_height), Image.LANCZOS)
     return circular_img
 
 
 def process_all_images(input_dir: str = "images"):
     """Process all images and create variants."""
     input_path = Path(input_dir)
-    
+
     if not input_path.exists():
         print(f"Error: {input_dir} directory not found!")
         print("Please run scrape_images.py first.")
@@ -105,7 +99,9 @@ def process_all_images(input_dir: str = "images"):
                 opacity_img.save(output_dirs["opacity"] / series_name / filename, "PNG")
 
                 profile_img = convert_to_circular(img.copy())
-                profile_img.save(output_dirs["profile_pic"] / series_name / filename, "PNG")
+                profile_img.save(
+                    output_dirs["profile_pic"] / series_name / filename, "PNG"
+                )
 
                 print(f"  Processed: {filename}")
                 processed_count += 1
@@ -120,4 +116,3 @@ def process_all_images(input_dir: str = "images"):
 
 if __name__ == "__main__":
     process_all_images()
-

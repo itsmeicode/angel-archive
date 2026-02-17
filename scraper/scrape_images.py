@@ -10,6 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import time
+import re
 
 
 def download_series_images(series_url: str, series_name: str, section_id: str):
@@ -67,6 +68,25 @@ def load_gallery_config(config_file: str = "gallery_config.json") -> dict:
         return json.load(f)
 
 
+def safe_series_folder_name(raw: str) -> str:
+    """
+    Convert website series titles into storage-safe folder names.
+
+    Supabase Storage rejects some characters in object keys (e.g. '(', ')', '~').
+    We normalize titles into ASCII-ish, underscore-separated names.
+
+    Examples:
+      "Animal Series 1 (~2018)" -> "Animal_Series_1_2018"
+      "Fruit Series (~2019)" -> "Fruit_Series_2019"
+    """
+    s = raw.strip()
+    s = re.sub(r"\(~\s*(\d{4})\s*\)", r"\1", s)
+    s = re.sub(r"\s+", "_", s)
+    s = re.sub(r"[^A-Za-z0-9_-]+", "_", s)
+    s = re.sub(r"_+", "_", s).strip("_")
+    return s
+
+
 def scrape_from_config():
     """Main scraping function - processes all galleries from config."""
     print("Loading gallery configuration...")
@@ -91,7 +111,7 @@ def scrape_from_config():
         print(f"{'='*60}\n")
 
         for gallery in galleries:
-            series_name = gallery["series_name"].replace(" ", "_")
+            series_name = safe_series_folder_name(gallery["series_name"])
             series_url = gallery["url"]
             gallery_id = gallery["gallery_id"]
 
@@ -107,4 +127,3 @@ def scrape_from_config():
 
 if __name__ == "__main__":
     scrape_from_config()
-

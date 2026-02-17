@@ -61,9 +61,9 @@ def convert_to_grayscale(img: Image.Image) -> Image.Image:
 def convert_to_circular(
     img: Image.Image,
     crop_width: int = 1000,
-    crop_height: int = 2000,
+    crop_height: int = 1000,
     zoom_factor: float = 0.5,
-    y_shift: int = -200
+    y_shift: int = -300,
 ) -> Image.Image:
     img_width, img_height = img.size
 
