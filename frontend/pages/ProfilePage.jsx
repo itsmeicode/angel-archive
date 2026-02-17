@@ -76,6 +76,8 @@ export const ProfilePage = () => {
                             angels_id: collection.angels.id,
                             angels_name: collection.angels.name,
                             angels_image_url: collection.angels.image_url,
+                            angels_image_bw_url: collection.angels.image_bw_url,
+                            angels_image_opacity_url: collection.angels.image_opacity_url,
                             angel_count: collection.count,
                         };
                         if (collection.is_favorite) categories.favorites.push(angelData);
@@ -224,7 +226,9 @@ export const ProfilePage = () => {
                             <SonnyAngelCard
                                 id={angel.angels_id}
                                 name={angel.angels_name}
-                                imageUrl={angel.angels_image_url}
+                                imageColorUrl={angel.angels_image_url}
+                                imageBwUrl={angel.angels_image_bw_url}
+                                imageOpacityUrl={angel.angels_image_opacity_url}
                                 userId={userId}
                                 onBookmarkAdd={handleBookmarkAdd}
                                 initialCount={angel.angel_count}

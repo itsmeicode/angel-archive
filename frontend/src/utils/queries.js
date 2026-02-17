@@ -30,6 +30,8 @@ export async function fetchAngelsImages() {
             image: angel.image,
             image_opacity: angel.image_opacity,
             image_bw_url: angel.image_bw_url,
+            image_url: angel.image_url,
+            image_opacity_url: angel.image_opacity_url,
         }));
     } catch (error) {
         console.error("Error fetching angel images:", error);

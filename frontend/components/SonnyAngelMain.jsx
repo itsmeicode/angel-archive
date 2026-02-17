@@ -14,29 +14,44 @@ export function SonnyAngelMain({ toggleLeftBar }) {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   useEffect(() => {
-    const loadImages = async () => {
-      const angels = await fetchAngelsImages();
-      if (angels.length) {
-        setImages(
-          angels.map((angel) => ({
-            id: angel.id,
-            name: angel.name,
-            imageUrl: angel.image_bw_url,
-          }))
-        );
+    const init = async () => {
+      setLoading(true);
+
+      const [{ user }, angels] = await Promise.all([
+        api.auth.getUser().catch(() => ({ user: null })),
+        fetchAngelsImages(),
+      ]);
+
+      const uid = user?.id || null;
+      setUserId(uid);
+
+      let countsByAngelId = {};
+      if (uid) {
+        try {
+          const collections = await api.collections.getByUser(uid);
+          countsByAngelId = Object.fromEntries(
+            (collections || []).map((c) => [c.angel_id, c.count ?? 0])
+          );
+        } catch (e) {
+          console.error("Error fetching collections:", e);
+        }
       }
+
+      setImages(
+        (angels || []).map((angel) => ({
+          id: angel.id,
+          name: angel.name,
+          imageBwUrl: angel.image_bw_url,
+          imageOpacityUrl: angel.image_opacity_url,
+          imageColorUrl: angel.image_url,
+          count: countsByAngelId[angel.id] ?? 0,
+        }))
+      );
+
       setLoading(false);
     };
 
-    const getUser = async () => {
-      const { user } = await api.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-
-    loadImages();
-    getUser();
+    init();
   }, []);
 
   const handleBookmarkAdd = async (type, angelId, angelName) => {
@@ -90,10 +105,12 @@ export function SonnyAngelMain({ toggleLeftBar }) {
               <SonnyAngelCard
                 id={angel.id}
                 name={angel.name}
-                imageUrl={angel.imageUrl}
+                imageBwUrl={angel.imageBwUrl}
+                imageOpacityUrl={angel.imageOpacityUrl}
+                imageColorUrl={angel.imageColorUrl}
                 userId={userId}
                 onBookmarkAdd={handleBookmarkAdd}
-                initialCount={angel.angel_count}
+                initialCount={angel.count}
               />
             </Grid>
           ))

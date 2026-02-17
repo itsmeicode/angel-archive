@@ -1,12 +1,7 @@
-import { useState, useEffect } from "react";
 import api from "../src/services/api";
 import { Typography } from "@mui/material";
 
-export function Counter({ userId, angelId, angelName, initialCount }) {
-    const [counter, setCounter] = useState(() => {
-        return Number.isNaN(Number(initialCount)) ? 0 : Number(initialCount);
-    });
-
+export function Counter({ userId, angelId, count, onChange }) {
     const updateUserCollection = async (newCount) => {
         try {
             if (newCount === 0) {
@@ -26,25 +21,16 @@ export function Counter({ userId, angelId, angelName, initialCount }) {
     };
 
     const handleDecrement = async () => {
-        setCounter((prev) => {
-            const newCount = Math.max(prev - 1, 0); 
-            updateUserCollection(newCount); 
-            return newCount;
-        });
+        const newCount = Math.max((Number(count) || 0) - 1, 0);
+        onChange?.(newCount);
+        updateUserCollection(newCount);
     };
 
     const handleIncrement = async () => {
-        setCounter((prev) => {
-            const newCount = prev + 1;
-            updateUserCollection(newCount); 
-            return newCount;
-        });
+        const newCount = (Number(count) || 0) + 1;
+        onChange?.(newCount);
+        updateUserCollection(newCount);
     };
-
-    useEffect(() => {
-        const validInitialCount = Number.isNaN(Number(initialCount)) ? 0 : Number(initialCount);
-        setCounter(validInitialCount);
-    }, [initialCount]);
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -63,7 +49,7 @@ export function Counter({ userId, angelId, angelName, initialCount }) {
             </Typography>
             
             <span style={{ margin: "0 10px", fontSize: "22px", fontWeight: "600", color: "black" }}>
-                {counter}
+                {Number(count) || 0}
             </span> 
 
             <Typography
