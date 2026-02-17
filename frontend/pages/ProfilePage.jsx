@@ -363,6 +363,9 @@ export const ProfilePage = () => {
                                     imageBwUrl={angel.angels_image_bw_url}
                                     imageOpacityUrl={angel.angels_image_opacity_url}
                                     count={angel[countField] ?? 0}
+                                    isFavorite={angel.is_favorite}
+                                    inSearchOf={angel.in_search_of}
+                                    willingToTrade={angel.willing_to_trade}
                                     onCountChange={(newCount) =>
                                         countField === "trade_count"
                                             ? handleTradeCountChange(angel.angels_id, newCount)

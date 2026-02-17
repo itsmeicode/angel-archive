@@ -12,6 +12,9 @@ export function SonnyAngelCard({
   count,
   onCountChange,
   onClearStatus,
+  isFavorite,
+  inSearchOf,
+  willingToTrade,
 }) {
   const [showBookmarkOptions, setShowBookmarkOptions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -72,6 +75,14 @@ export function SonnyAngelCard({
       )}
 
       <Counter count={count} onChange={onCountChange} />
+
+      {(isFavorite || inSearchOf || willingToTrade) && (
+        <div className="sonny-angel-status-strip">
+          {isFavorite && <span className="status-icon status-fav" title="Favorite">💖</span>}
+          {inSearchOf && <span className="status-icon status-iso" title="In search of">🔍</span>}
+          {willingToTrade && <span className="status-icon status-wtt" title="Willing to trade">🤝</span>}
+        </div>
+      )}
     </div>
   );
 }

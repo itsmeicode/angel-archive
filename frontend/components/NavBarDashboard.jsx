@@ -77,8 +77,13 @@ export function NavBarDashboard() {
                         anchorEl={anchorEl}
                         open={open}
                         onClose={handleClose}
-                        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                         transformOrigin={{ vertical: "top", horizontal: "right" }}
+                        PaperProps={{
+                            sx: {
+                                mt: 1, // small offset below the avatar
+                            },
+                        }}
                     >
                         <MenuItem onClick={() => { 
                             handleClose(); 

@@ -243,6 +243,9 @@ export function SonnyAngelMain({ toggleLeftBar }) {
                 imageOpacityUrl={angel.imageOpacityUrl}
                 imageColorUrl={angel.imageColorUrl}
                 count={count}
+                isFavorite={c?.is_favorite}
+                inSearchOf={c?.in_search_of}
+                willingToTrade={c?.willing_to_trade}
                 onCountChange={(newCount) => handleCountChange(angel.id, newCount)}
                 onBookmarkAdd={(type) => handleBookmarkAdd(type, angel.id)}
               />
