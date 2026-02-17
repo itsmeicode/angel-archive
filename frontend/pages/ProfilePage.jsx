@@ -39,18 +39,40 @@ export const ProfilePage = () => {
         paddingBottom: "6px",
     };
 
-    const fetchAngelDetails = async (angels) => {
-        return Promise.all(
-            angels.map(async (angel) => {
-                const angelDetails = await api.angels.getById(angel.id);
-                return {
-                    angels_id: angel.id,
-                    angels_name: angelDetails?.name,
-                    angels_image_url: angelDetails?.image_url,
-                    angel_count: angel.count,
-                };
-            })
-        );
+    const loadCollections = async (uid) => {
+        const collections = await api.collections.getByUser(uid);
+
+        const categories = {
+            favorites: [],
+            inSearchOf: [],
+            willingToTrade: [],
+            allAngels: [],
+        };
+
+        (collections || []).forEach((collection) => {
+            const angelData = {
+                angels_id: collection.angels.id,
+                angels_name: collection.angels.name,
+                angels_image_url: collection.angels.image_url,
+                angels_image_bw_url: collection.angels.image_bw_url,
+                angels_image_opacity_url: collection.angels.image_opacity_url,
+                angel_count: collection.count ?? 0,
+                trade_count: collection.trade_count ?? (collection.willing_to_trade ? 1 : 0),
+                is_favorite: !!collection.is_favorite,
+                in_search_of: !!collection.in_search_of,
+                willing_to_trade: !!collection.willing_to_trade,
+            };
+
+            if (collection.is_favorite) categories.favorites.push(angelData);
+            if (collection.in_search_of) categories.inSearchOf.push(angelData);
+            if (collection.willing_to_trade) categories.willingToTrade.push(angelData);
+            categories.allAngels.push(angelData);
+        });
+
+        setAngels(categories.allAngels);
+        setFavorites(categories.favorites);
+        setInSearchOf(categories.inSearchOf);
+        setWillingToTrade(categories.willingToTrade);
     };
 
     useEffect(() => {
@@ -61,36 +83,7 @@ export const ProfilePage = () => {
                 const userData = await api.users.getProfile(user.id);
                 setUsername(userData?.username);
 
-                const collections = await api.collections.getByUser(user.id);
-
-                if (collections) {
-                    const categories = {
-                        favorites: [],
-                        inSearchOf: [],
-                        willingToTrade: [],
-                        allAngels: [],
-                    };
-
-                    collections.forEach((collection) => {
-                        const angelData = {
-                            angels_id: collection.angels.id,
-                            angels_name: collection.angels.name,
-                            angels_image_url: collection.angels.image_url,
-                            angels_image_bw_url: collection.angels.image_bw_url,
-                            angels_image_opacity_url: collection.angels.image_opacity_url,
-                            angel_count: collection.count,
-                        };
-                        if (collection.is_favorite) categories.favorites.push(angelData);
-                        if (collection.in_search_of) categories.inSearchOf.push(angelData);
-                        if (collection.willing_to_trade) categories.willingToTrade.push(angelData);
-                        categories.allAngels.push(angelData);
-                    });
-
-                    setAngels(categories.allAngels);
-                    setFavorites(categories.favorites);
-                    setInSearchOf(categories.inSearchOf);
-                    setWillingToTrade(categories.willingToTrade);
-                }
+                await loadCollections(user.id);
 
                 await checkExportStatus();
             }
@@ -110,32 +103,160 @@ export const ProfilePage = () => {
         );
     };
 
-    const handleBookmarkAdd = async (type, angelId, angelName) => {
+    const upsertOrDelete = async (angelId, next) => {
+        const payload = {
+            angel_id: angelId,
+            count: next.count ?? 0,
+            trade_count: next.trade_count ?? 0,
+            is_favorite: !!next.is_favorite,
+            in_search_of: !!next.in_search_of,
+            willing_to_trade: !!next.willing_to_trade,
+        };
+
+        const shouldDelete =
+            (payload.count ?? 0) === 0 &&
+            (payload.trade_count ?? 0) === 0 &&
+            !payload.is_favorite &&
+            !payload.in_search_of &&
+            !payload.willing_to_trade;
+
+        if (shouldDelete) {
+            await api.collections.delete(userId, angelId);
+        } else {
+            await api.collections.upsert(userId, payload);
+        }
+
+        await loadCollections(userId);
+    };
+
+    const handleBookmarkAdd = async (type, angelId) => {
         if (!userId) return;
 
-        let updateFields = {};
+        const all = [...angels, ...favorites, ...inSearchOf, ...willingToTrade];
+        const current = all.find((a) => a.angels_id === angelId) || {
+            angels_id: angelId,
+            angel_count: 0,
+            is_favorite: false,
+            in_search_of: false,
+            willing_to_trade: false,
+        };
+
+        const currentState = {
+            count: current.angel_count ?? 0,
+            trade_count: current.trade_count ?? (current.willing_to_trade ? 1 : 0),
+            is_favorite: !!current.is_favorite,
+            in_search_of: !!current.in_search_of,
+            willing_to_trade: !!current.willing_to_trade,
+        };
+
+        let next = { ...currentState };
 
         switch (type) {
-          case "FAV":
-            updateFields.is_favorite = true;
-            break;
-          case "ISO":
-            updateFields.in_search_of = true;
-            break;
-          case "WTT":
-            updateFields.willing_to_trade = true;
-            break;
-          default:
-            return;
+            case "FAV":
+                next.is_favorite = !currentState.is_favorite;
+                break;
+            case "ISO":
+                if (currentState.in_search_of) {
+                    next.in_search_of = false;
+                } else {
+                    next.in_search_of = true;
+                    next.count = 0;
+                    next.trade_count = 0;
+                    next.willing_to_trade = false;
+                }
+                break;
+            case "WTT":
+                if ((currentState.count ?? 0) <= 0) {
+                    console.warn("Set count > 0 before marking WTT.");
+                    return;
+                }
+                if (currentState.willing_to_trade) {
+                    next.willing_to_trade = false;
+                    next.trade_count = 0;
+                } else {
+                    next.willing_to_trade = true;
+                    next.trade_count = 1;
+                }
+                break;
+            default:
+                return;
         }
 
         try {
-          await api.collections.upsert(userId, { angel_id: angelId, ...updateFields });
-          console.log("Bookmark updated successfully");
+            await upsertOrDelete(angelId, next);
         } catch (error) {
-          console.error("Error updating bookmark:", error);
+            console.error("Error updating bookmark:", error);
         }
-      };
+    };
+
+    const handleCountChange = async (angelId, newCount) => {
+        if (!userId) return;
+
+        const all = [...angels, ...favorites, ...inSearchOf, ...willingToTrade];
+        const current = all.find((a) => a.angels_id === angelId) || {
+            angels_id: angelId,
+            angel_count: 0,
+            is_favorite: false,
+            in_search_of: false,
+            willing_to_trade: false,
+        };
+
+        let next = {
+            count: newCount,
+            trade_count: current.trade_count ?? (current.willing_to_trade ? 1 : 0),
+            is_favorite: !!current.is_favorite,
+            in_search_of: !!current.in_search_of,
+            willing_to_trade: !!current.willing_to_trade,
+        };
+
+        if ((newCount ?? 0) > 0) {
+            next.in_search_of = false;
+        }
+        if ((newCount ?? 0) === 0) {
+            next.willing_to_trade = false;
+            next.trade_count = 0;
+        }
+
+        if ((next.trade_count ?? 0) > (next.count ?? 0)) {
+            next.trade_count = next.count ?? 0;
+            if ((next.trade_count ?? 0) === 0) {
+                next.willing_to_trade = false;
+            }
+        }
+
+        try {
+            await upsertOrDelete(angelId, next);
+        } catch (error) {
+            console.error("Error updating count:", error);
+        }
+    };
+
+    const handleTradeCountChange = async (angelId, newTradeCount) => {
+        if (!userId) return;
+
+        const all = [...angels, ...favorites, ...inSearchOf, ...willingToTrade];
+        const current = all.find((a) => a.angels_id === angelId);
+        if (!current) return;
+
+        const ownedCount = current.angel_count ?? 0;
+        if (ownedCount <= 0) return;
+
+        const clampedTrade = Math.max(0, Math.min(Number(newTradeCount) || 0, ownedCount));
+
+        const next = {
+            count: ownedCount,
+            trade_count: clampedTrade,
+            is_favorite: !!current.is_favorite,
+            in_search_of: false, // trading implies owned
+            willing_to_trade: clampedTrade > 0,
+        };
+
+        try {
+            await upsertOrDelete(angelId, next);
+        } catch (error) {
+            console.error("Error updating trade count:", error);
+        }
+    };
 
     const checkExportStatus = async () => {
         if (!userId) return;
@@ -208,34 +329,56 @@ export const ProfilePage = () => {
         }
     };
 
-    const renderCategory = (title, category) => {
-        if (category.length === 0) return null;
+    const renderCategory = (
+        title,
+        category,
+        countField = "angel_count",
+        requireOwned = false,
+        clearType = null
+    ) => {
+        // Optionally restrict to angels with a positive count for this field
+        const baseList = requireOwned
+            ? category.filter((angel) => (angel[countField] ?? 0) > 0)
+            : category;
 
-        const filteredAngels = filterAngels(category);
-
-        if (filteredAngels.length === 0) return null;
+        const filteredAngels = filterAngels(baseList);
 
         return (
             <Paper elevation={6} sx={angelCategoryStyles}>
                 <Typography variant="h5" gutterBottom sx={angelTypographyStyles}>
                     {title}
                 </Typography>
-                <Grid container spacing={3} justifyContent="flex-start">
-                    {filteredAngels.map((angel) => (
-                        <Grid item key={angel.angels_id} xs={6} sm={4} md={3} lg={2}>
-                            <SonnyAngelCard
-                                id={angel.angels_id}
-                                name={angel.angels_name}
-                                imageColorUrl={angel.angels_image_url}
-                                imageBwUrl={angel.angels_image_bw_url}
-                                imageOpacityUrl={angel.angels_image_opacity_url}
-                                userId={userId}
-                                onBookmarkAdd={handleBookmarkAdd}
-                                initialCount={angel.angel_count}
-                            />
-                        </Grid>
-                    ))}
-                </Grid>
+                {filteredAngels.length === 0 ? (
+                    <Typography variant="body2" sx={{ textAlign: "left", color: "#555" }}>
+                        No angels here yet.
+                    </Typography>
+                ) : (
+                    <Grid container spacing={3} justifyContent="flex-start">
+                        {filteredAngels.map((angel) => (
+                            <Grid item key={angel.angels_id} xs={6} sm={4} md={3} lg={2}>
+                                <SonnyAngelCard
+                                    id={angel.angels_id}
+                                    name={angel.angels_name}
+                                    imageColorUrl={angel.angels_image_url}
+                                    imageBwUrl={angel.angels_image_bw_url}
+                                    imageOpacityUrl={angel.angels_image_opacity_url}
+                                    count={angel[countField] ?? 0}
+                                    onCountChange={(newCount) =>
+                                        countField === "trade_count"
+                                            ? handleTradeCountChange(angel.angels_id, newCount)
+                                            : handleCountChange(angel.angels_id, newCount)
+                                    }
+                                    onBookmarkAdd={(type) => handleBookmarkAdd(type, angel.angels_id)}
+                                    onClearStatus={
+                                        clearType
+                                            ? () => handleBookmarkAdd(clearType, angel.angels_id)
+                                            : undefined
+                                    }
+                                />
+                            </Grid>
+                        ))}
+                    </Grid>
+                )}
             </Paper>
         );
     };
@@ -329,10 +472,10 @@ export const ProfilePage = () => {
                 )}
             </Paper>
 
-            {renderCategory("Here are the angels you've collected:", angels)}
-            {renderCategory("Your Favorite Angels:", favorites)}
-            {renderCategory("Angels You're In Search Of:", inSearchOf)}
-            {renderCategory("Angels You're Willing To Trade:", willingToTrade)}
+            {renderCategory("Here are the angels you've collected:", angels, "angel_count", true, null)}
+            {renderCategory("Your Favorite Angels:", favorites, "angel_count", false, "FAV")}
+            {renderCategory("Angels You're In Search Of:", inSearchOf, "angel_count", false, "ISO")}
+            {renderCategory("Angels You're Willing To Trade:", willingToTrade, "trade_count", false, "WTT")}
         </Box>
     );
 };

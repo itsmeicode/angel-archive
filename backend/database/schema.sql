@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS public.user_collections (
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
     angel_id BIGINT REFERENCES public.angels(id) ON DELETE CASCADE,
     count INT DEFAULT 0,
+    trade_count INT DEFAULT 0,
     is_favorite BOOLEAN DEFAULT FALSE,
     in_search_of BOOLEAN DEFAULT FALSE,
     willing_to_trade BOOLEAN DEFAULT FALSE,
@@ -70,6 +71,7 @@ CREATE INDEX idx_user_collections_angel ON public.user_collections(angel_id);
 
 COMMENT ON TABLE public.user_collections IS 'User angel collections (owned, wishlist, trade list)';
 COMMENT ON COLUMN public.user_collections.count IS 'How many of this angel the user owns';
+COMMENT ON COLUMN public.user_collections.trade_count IS 'How many of this angel the user is willing to trade';
 COMMENT ON COLUMN public.user_collections.in_search_of IS 'User is looking for this angel';
 COMMENT ON COLUMN public.user_collections.willing_to_trade IS 'User willing to trade this angel';
 

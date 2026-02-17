@@ -6,6 +6,7 @@ from datetime import datetime
 class CollectionItemBase(BaseModel):
     angel_id: int
     count: int = 0
+    trade_count: int = 0
     is_favorite: bool = False
     in_search_of: bool = False
     willing_to_trade: bool = False

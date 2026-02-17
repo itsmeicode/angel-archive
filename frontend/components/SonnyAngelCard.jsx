@@ -1,26 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Counter } from "./Counter";
 import "../src/App.css";
 
 export function SonnyAngelCard({
   id,
   name,
-  imageUrl,
   imageBwUrl,
   imageOpacityUrl,
   imageColorUrl,
   onBookmarkAdd,
-  userId,
-  initialCount,
+  count,
+  onCountChange,
+  onClearStatus,
 }) {
   const [showBookmarkOptions, setShowBookmarkOptions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [count, setCount] = useState(() => (Number.isNaN(Number(initialCount)) ? 0 : Number(initialCount)));
-
-  useEffect(() => {
-    const next = Number.isNaN(Number(initialCount)) ? 0 : Number(initialCount);
-    setCount(next);
-  }, [initialCount]);
 
   const handleBookmarkClick = (type) => {
     onBookmarkAdd(type, id, name);
@@ -29,13 +23,13 @@ export function SonnyAngelCard({
   const displayImageUrl = useMemo(() => {
     const owned = (Number(count) || 0) > 0;
 
-    // Owned: prefer full-color (fallback to provided imageUrl)
-    if (owned) return imageColorUrl || imageUrl || imageBwUrl || imageOpacityUrl;
+    // Owned: show full-color
+    if (owned) return imageColorUrl || imageBwUrl || imageOpacityUrl;
 
     // Not owned: default BW; on hover show opacity variant
-    if (isHovered) return imageOpacityUrl || imageUrl || imageBwUrl;
-    return imageBwUrl || imageUrl || imageOpacityUrl;
-  }, [count, imageBwUrl, imageColorUrl, imageOpacityUrl, imageUrl, isHovered]);
+    if (isHovered) return imageOpacityUrl || imageBwUrl;
+    return imageBwUrl || imageOpacityUrl;
+  }, [count, imageBwUrl, imageColorUrl, imageOpacityUrl, isHovered]);
 
   return (
     <div
@@ -50,6 +44,16 @@ export function SonnyAngelCard({
       }}
     >
       <p className="name">{name}</p>
+
+      {onClearStatus && (
+        <button
+          type="button"
+          className="sonny-angel-clear-btn"
+          onClick={onClearStatus}
+        >
+          ×
+        </button>
+      )}
 
       <img src={displayImageUrl} alt={name} loading="lazy" className="image" />
 
@@ -67,7 +71,7 @@ export function SonnyAngelCard({
         </div>
       )}
 
-      <Counter userId={userId} angelId={id} count={count} onChange={setCount} />
+      <Counter count={count} onChange={onCountChange} />
     </div>
   );
 }

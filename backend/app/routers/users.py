@@ -89,6 +89,7 @@ async def upsert_collection(user_id: str, item: CollectionItemCreate):
         "user_id": user_id,
         "angel_id": item.angel_id,
         "count": item.count,
+        "trade_count": item.trade_count,
         "is_favorite": item.is_favorite,
         "in_search_of": item.in_search_of,
         "willing_to_trade": item.willing_to_trade,
