@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Box, Grid, Typography, useMediaQuery, Paper, Button, CircularProgress } from "@mui/material";
 import { SonnyAngelCard } from "../components/SonnyAngelCard";
 import { SearchBar } from "../components/SearchBar";
@@ -102,6 +102,13 @@ export const ProfilePage = () => {
             angel.angels_name.toLowerCase().includes(searchTerm)
         );
     };
+
+    // Collect all unique angel names from all categories for search autocomplete
+    const allProfileAngelNames = useMemo(() => {
+        const allAngels = [...angels, ...favorites, ...inSearchOf, ...willingToTrade];
+        const uniqueNames = [...new Set(allAngels.map((a) => a.angels_name))];
+        return uniqueNames.sort();
+    }, [angels, favorites, inSearchOf, willingToTrade]);
 
     const upsertOrDelete = async (angelId, next) => {
         const payload = {
@@ -355,7 +362,7 @@ export const ProfilePage = () => {
                 ) : (
                     <Grid container spacing={3} justifyContent="flex-start">
                         {filteredAngels.map((angel) => (
-                            <Grid item key={angel.angels_id} xs={6} sm={4} md={3} lg={2}>
+                            <Grid item key={angel.angels_id} xs={12} sm={6} md={4} lg={3}>
                                 <SonnyAngelCard
                                     id={angel.angels_id}
                                     name={angel.angels_name}
@@ -401,7 +408,7 @@ export const ProfilePage = () => {
                 Welcome, {username ? username : "User"}!
             </Typography>
 
-            <SearchBar options={[]} onSearch={handleSearch} />
+            <SearchBar options={allProfileAngelNames} onSearch={handleSearch} />
 
             <Paper elevation={6} sx={{
                 ...angelCategoryStyles,

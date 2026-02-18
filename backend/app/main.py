@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import time
 
 from app.config.settings import get_settings
-from app.routers import health, auth, angels, users, audit, export, jobs
+from app.routers import health, auth, angels, users, audit, export, jobs, series
 from app.middleware.rate_limiter import limiter
 from app.services.cron_manager import initialize_cron, shutdown_cron
 
@@ -57,6 +57,7 @@ app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(export.router)
 app.include_router(jobs.router)
+app.include_router(series.router)
 
 
 @app.get("/")

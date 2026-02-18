@@ -11,13 +11,14 @@ html, body, #root {
 
 .sonny-angel-card {
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background-color: pink;
   position: relative;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease-in-out;
+  max-width: 100%;
 }
 
 .sonny-angel-card:hover {
@@ -25,14 +26,14 @@ html, body, #root {
 }
 
 .name {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: bold;
   color: #333;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .image {

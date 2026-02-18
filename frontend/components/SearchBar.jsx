@@ -16,6 +16,8 @@ export function SearchBar({ options, onSearch }) {
     onSearch(newInputValue);
   };
 
+  const limitedOptions = options.slice(0, 5);
+
   return (
     <Box sx={{ ...sectionStyle, mb: 2 }}>
       <Autocomplete
@@ -23,6 +25,12 @@ export function SearchBar({ options, onSearch }) {
         options={options}
         inputValue={inputValue}
         onInputChange={handleInputChange}
+         ListboxProps={{
+          style: {
+            maxHeight: 125,
+            overflowY: "auto",
+          },
+        }}
         sx={{
           width: { xs: "90%", sm: "60%", md: "40%" },
           "& .MuiInputBase-root": {

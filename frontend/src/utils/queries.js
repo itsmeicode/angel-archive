@@ -26,6 +26,7 @@ export async function fetchAngelsImages() {
         return sortedData.map(angel => ({
             id: angel.id,
             name: angel.name,
+            series_id: angel.series_id,
             image_bw: angel.image_bw,
             image: angel.image,
             image_opacity: angel.image_opacity,
@@ -48,3 +49,17 @@ export const createUserInDatabase = async (userData) => {
         return null;
     }
 };
+
+export async function fetchSeries() {
+    try {
+        const data = await api.request("/series");
+        if (!Array.isArray(data)) {
+            console.error("Expected array but got:", typeof data, data);
+            return [];
+        }
+        return data.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+        console.error("Error fetching series:", error);
+        return [];
+    }
+}

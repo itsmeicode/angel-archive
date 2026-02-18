@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Box, Grid, Typography, useMediaQuery } from "@mui/material";
 import { SonnyAngelCard } from "./SonnyAngelCard";
 import { SearchBar } from "./SearchBar";
+import { Filter } from "./Filter";
 import { fetchAngelsImages } from "../src/utils/queries";
 import api from "../src/services/api";
 
@@ -11,6 +12,13 @@ export function SonnyAngelMain({ toggleLeftBar }) {
   const [userId, setUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [collectionsByAngelId, setCollectionsByAngelId] = useState({});
+  const [filters, setFilters] = useState({
+    owned: "all",
+    seriesIds: [],
+    fav: false,
+    iso: false,
+    wtt: false,
+  });
 
   const isMobile = useMediaQuery("(max-width:600px)");
 
@@ -56,6 +64,7 @@ export function SonnyAngelMain({ toggleLeftBar }) {
         (angels || []).map((angel) => ({
           id: angel.id,
           name: angel.name,
+          series_id: angel.series_id,
           imageBwUrl: angel.image_bw_url,
           imageOpacityUrl: angel.image_opacity_url,
           imageColorUrl: angel.image_url,
@@ -211,50 +220,124 @@ export function SonnyAngelMain({ toggleLeftBar }) {
     await upsertCollection(angelId, next);
   };
 
-  const filteredImages = images.filter((angel) =>
-    angel.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredImages = useMemo(() => {
+    return images.filter((angel) => {
+      const nameMatch = angel.name.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!nameMatch) return false;
+
+      const c = collectionsByAngelId[angel.id] || {
+        count: 0,
+        is_favorite: false,
+        in_search_of: false,
+        willing_to_trade: false,
+      };
+
+      // Ownership filter
+      if (filters?.owned === "owned" && (c.count ?? 0) <= 0) return false;
+      if (filters?.owned === "unowned" && (c.count ?? 0) > 0) return false;
+
+      // Series filter
+      if (filters?.seriesIds && filters.seriesIds.length > 0) {
+        if (!filters.seriesIds.includes(angel.series_id)) return false;
+      }
+
+      // Status filters (AND semantics)
+      if (filters?.fav && !c.is_favorite) return false;
+      if (filters?.iso && !c.in_search_of) return false;
+      if (filters?.wtt && !c.willing_to_trade) return false;
+
+      return true;
+    });
+  }, [images, searchTerm, collectionsByAngelId, filters]);
 
   return (
     <Box
       flex={4}
       p={2}
-      onClick={() => isMobile && toggleLeftBar()} 
-      sx={{ cursor: isMobile ? "pointer" : "default",}}
+      onClick={() => isMobile && toggleLeftBar()}
+      sx={{ cursor: isMobile ? "pointer" : "default" }}
     >
       <Typography variant="h4" gutterBottom>
         Full Collection
       </Typography>
-      <SearchBar options={images.map((angel) => angel.name)} onSearch={setSearchTerm} />
-      <Grid container spacing={3} justifyContent="flex-start">
-        {loading ? (
-          <Typography variant="body1">Loading images...</Typography>
-        ) : (
-          filteredImages.map((angel) => (
-            <Grid item key={angel.id} xs={6} sm={4} md={3} lg={2}>
-              {(() => {
+
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          gap: 3,
+          mt: 1,
+        }}
+      >
+        <Box
+          sx={{
+            width: { xs: "100%", md: 320 },
+            flexShrink: 0,
+            bgcolor: "rgba(255,255,255,0.9)",
+            borderRadius: 2,
+            boxShadow: 2,
+            p: 2,
+            height: "fit-content",
+            alignSelf: "flex-start",
+            position: { md: "sticky" },
+            top: { md: "20px" },
+            maxHeight: { md: "calc(100vh - 40px)" },
+            overflowY: { md: "auto" },
+          }}
+        >
+          <SearchBar
+            options={images.map((angel) => angel.name)}
+            onSearch={setSearchTerm}
+          />
+          <Box mt={2}>
+            <Filter onFilterChange={setFilters} />
+          </Box>
+        </Box>
+
+        <Box sx={{ flexGrow: 1 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+                lg: "repeat(5, 1fr)",
+              },
+              gap: 2,
+            }}
+          >
+            {loading ? (
+              <Typography variant="body1">Loading images...</Typography>
+            ) : (
+              filteredImages.map((angel) => {
                 const c = collectionsByAngelId[angel.id];
                 const count = c?.count ?? 0;
                 return (
-              <SonnyAngelCard
-                id={angel.id}
-                name={angel.name}
-                imageBwUrl={angel.imageBwUrl}
-                imageOpacityUrl={angel.imageOpacityUrl}
-                imageColorUrl={angel.imageColorUrl}
-                count={count}
-                isFavorite={c?.is_favorite}
-                inSearchOf={c?.in_search_of}
-                willingToTrade={c?.willing_to_trade}
-                onCountChange={(newCount) => handleCountChange(angel.id, newCount)}
-                onBookmarkAdd={(type) => handleBookmarkAdd(type, angel.id)}
-              />
+                  <SonnyAngelCard
+                    key={angel.id}
+                    id={angel.id}
+                    name={angel.name}
+                    imageBwUrl={angel.imageBwUrl}
+                    imageOpacityUrl={angel.imageOpacityUrl}
+                    imageColorUrl={angel.imageColorUrl}
+                    count={count}
+                    isFavorite={c?.is_favorite}
+                    inSearchOf={c?.in_search_of}
+                    willingToTrade={c?.willing_to_trade}
+                    onCountChange={(newCount) =>
+                      handleCountChange(angel.id, newCount)
+                    }
+                    onBookmarkAdd={(type) =>
+                      handleBookmarkAdd(type, angel.id)
+                    }
+                  />
                 );
-              })()}
-            </Grid>
-          ))
-        )}
-      </Grid>
+              })
+            )}
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 }

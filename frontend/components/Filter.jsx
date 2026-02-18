@@ -1,135 +1,166 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, Button } from "@mui/material";
+import { fetchSeries } from "../src/utils/queries";
 
 const inventoryOptions = [
-  "Select All",
-  "All in inventory",
-  "All not in inventory",
+  { value: "all", label: "All angels" },
+  { value: "owned", label: "Owned only" },
+  { value: "unowned", label: "Unowned only" },
 ];
 
-const seriesOptions = [
-  "Animal 1 2018 Series",
-  "Animal 2 2018 Series",
-  "Animal 3 2018 Series",
-  "Animal 4 2018 Series",
-  "Animal 1 Series",
-  "Animal 2 Series",
-  "Animal 3 Series",
-  "Animal 4 Series",
-  "Flower 2019 Series",
-  "Fruit 2019 Series",
-  "Fruit Series",
-  "Marine 2019 Series",
-  "Marine Series",
-  "Sweets 2018 Series",
-  "Sweets Series",
-  "Vegetable 2019 Series",
+const statusOptions = [
+  { key: "fav", label: "FAV - Favorite" },
+  { key: "iso", label: "ISO - In Search Of" },
+  { key: "wtt", label: "WTT - Willing To Trade" },
 ];
-
-const statusOptions = ["FAV - Favorite", "ISO - In Search Of", "WTT - Willing To Trade"];
 
 export function Filter({ onFilterChange }) {
-  const [inventory, setInventory] = useState("");
-  const [selectedSeries, setSelectedSeries] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState([]);
+  const [inventory, setInventory] = useState("all");
+  const [seriesOptions, setSeriesOptions] = useState([]);
+  const [selectedSeriesIds, setSelectedSeriesIds] = useState([]);
+  const [selectedStatusKeys, setSelectedStatusKeys] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const series = await fetchSeries();
+      setSeriesOptions(series || []);
+    };
+    load();
+  }, []);
+
+  const emitFilters = (next = {}) => {
+    const filters = {
+      owned: inventory,
+      seriesIds: selectedSeriesIds,
+      fav: selectedStatusKeys.includes("fav"),
+      iso: selectedStatusKeys.includes("iso"),
+      wtt: selectedStatusKeys.includes("wtt"),
+      ...next,
+    };
+    onFilterChange?.(filters);
+  };
 
   const handleInventoryChange = (event) => {
-    const newInventory = event.target.value;
-    setInventory(newInventory);
-    onFilterChange({ inventory: newInventory, series: selectedSeries, status: selectedStatus });
+    const value = event.target.value;
+    setInventory(value);
+    emitFilters({ owned: value });
   };
 
   const handleSeriesChange = (event) => {
-    const newSeries = event.target.value;
-    setSelectedSeries(newSeries);
-    onFilterChange({ inventory, series: newSeries, status: selectedStatus });
+    const ids = event.target.value;
+    setSelectedSeriesIds(ids);
+    emitFilters({ seriesIds: ids });
   };
 
   const handleStatusChange = (event) => {
-    const newStatus = event.target.value;
-    setSelectedStatus(newStatus);
-    onFilterChange({ inventory, series: selectedSeries, status: newStatus });
+    const keys = event.target.value;
+    setSelectedStatusKeys(keys);
+    emitFilters({
+      fav: keys.includes("fav"),
+      iso: keys.includes("iso"),
+      wtt: keys.includes("wtt"),
+    });
   };
 
   const resetFilters = () => {
-    setInventory("");
-    setSelectedSeries([]);
-    setSelectedStatus([]);
-    onFilterChange({ inventory: "", series: [], status: [] });
+    setInventory("all");
+    setSelectedSeriesIds([]);
+    setSelectedStatusKeys([]);
+    emitFilters({
+      owned: "all",
+      seriesIds: [],
+      fav: false,
+      iso: false,
+      wtt: false,
+    });
   };
 
   return (
-    <Box sx={{ padding: "20px" }}>
-      <Typography variant="h5" gutterBottom>Filter Options</Typography>
+    <Box sx={{ padding: "12px", height: "fit-content" }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 1.5, fontSize: "1rem" }}>Filter Angels</Typography>
 
-      <FormControl fullWidth sx={{ marginBottom: "20px" }}>
-        <InputLabel>Inventory Status</InputLabel>
+      <FormControl fullWidth sx={{ marginBottom: "12px" }}>
+        <InputLabel>Ownership</InputLabel>
         <Select
           value={inventory}
-          label="Inventory Status"
+          label="Ownership"
           onChange={handleInventoryChange}
         >
-          {inventoryOptions.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option}
+          {inventoryOptions.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <FormControl fullWidth sx={{ marginBottom: "20px" }}>
+      <FormControl fullWidth sx={{ marginBottom: "12px" }}>
         <InputLabel>Series</InputLabel>
         <Select
           multiple
-          value={selectedSeries}
+          value={selectedSeriesIds}
           label="Series"
           onChange={handleSeriesChange}
-          renderValue={(selected) => selected.join(", ")}
+          renderValue={(selected) => {
+            if (selected.length === 0) return "";
+            if (selected.length === 1) {
+              const series = seriesOptions.find((s) => s.id === selected[0]);
+              return series?.name || "";
+            }
+            return `${selected.length} series selected`;
+          }}
           MenuProps={{
             PaperProps: {
               style: {
-                width: "400px",
+                width: "260px",
                 maxHeight: "300px",
               },
             },
           }}
         >
-          {seriesOptions.map((option) => (
-            <MenuItem key={option} value={option}>
-              <Checkbox checked={selectedSeries.indexOf(option) > -1} />
-              {option}
+          {seriesOptions.map((s) => (
+            <MenuItem key={s.id} value={s.id}>
+              <Checkbox checked={selectedSeriesIds.indexOf(s.id) > -1} />
+              {s.name}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <FormControl fullWidth sx={{ marginBottom: "20px" }}>
+      <FormControl fullWidth sx={{ marginBottom: "12px" }}>
         <InputLabel>Status</InputLabel>
         <Select
           multiple
-          value={selectedStatus}
+          value={selectedStatusKeys}
           label="Status"
           onChange={handleStatusChange}
-          renderValue={(selected) => selected.join(", ")}
+          renderValue={(selected) => {
+            if (selected.length === 0) return "";
+            if (selected.length === 1) {
+              const opt = statusOptions.find((o) => o.key === selected[0]);
+              return opt?.label || "";
+            }
+            return `${selected.length} statuses selected`;
+          }}
           MenuProps={{
             PaperProps: {
               style: {
-                width: "200px", 
+                width: "260px",
                 maxHeight: "300px",
               },
             },
           }}
         >
-          {statusOptions.map((option) => (
-            <MenuItem key={option} value={option}>
-              <Checkbox checked={selectedStatus.indexOf(option) > -1} />
-              {option}
+          {statusOptions.map((opt) => (
+            <MenuItem key={opt.key} value={opt.key}>
+              <Checkbox checked={selectedStatusKeys.indexOf(opt.key) > -1} />
+              {opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <Button variant="outlined" onClick={resetFilters}>
+      <Button variant="outlined" onClick={resetFilters} fullWidth size="small">
         Reset Filters
       </Button>
     </Box>
