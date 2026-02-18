@@ -44,7 +44,7 @@ async def export_user_data(
     supabase = get_supabase()
     
     collections_result = supabase.table("user_collections").select(
-        "*, angels:angel_id (name, series_id, card_number)"
+        "*, angels:angel_id (name, series_id)"
     ).eq("user_id", user_id).execute()
     
     collections = collections_result.data or []
@@ -56,7 +56,6 @@ async def export_user_data(
             {
                 "angel_name": item.get("angels", {}).get("name"),
                 "series_id": item.get("angels", {}).get("series_id"),
-                "card_number": item.get("angels", {}).get("card_number"),
                 "count": item.get("count", 0),
                 "is_favorite": item.get("is_favorite", False),
                 "in_search_of": item.get("in_search_of", False),
@@ -78,7 +77,7 @@ async def export_user_data(
         writer = csv.writer(output)
         
         writer.writerow([
-            "angel_name", "series_id", "card_number", "count",
+            "angel_name", "series_id", "count",
             "is_favorite", "in_search_of", "willing_to_trade"
         ])
         
@@ -86,7 +85,6 @@ async def export_user_data(
             writer.writerow([
                 item["angel_name"],
                 item["series_id"],
-                item["card_number"],
                 item["count"],
                 item["is_favorite"],
                 item["in_search_of"],

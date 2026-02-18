@@ -71,7 +71,7 @@ async def get_user_collections(user_id: str):
     """Get all collection items for a user with angel details"""
     supabase = get_supabase()
     result = supabase.table("user_collections").select(
-        "*, angels:angel_id (id, name, card_number, series_id, image, image_bw, image_opacity, image_profile_pic)"
+        "*, angels:angel_id (id, name, series_id, image, image_bw, image_opacity, image_profile_pic)"
     ).eq("user_id", user_id).order("updated_at", desc=True).execute()
 
     if not result.data:
