@@ -18,6 +18,7 @@ export function SonnyAngelMain({ toggleLeftBar }) {
     fav: false,
     iso: false,
     wtt: false,
+    sortBy: "name-asc",
   });
 
   const isMobile = useMediaQuery("(max-width:600px)");
@@ -221,7 +222,7 @@ export function SonnyAngelMain({ toggleLeftBar }) {
   };
 
   const filteredImages = useMemo(() => {
-    return images.filter((angel) => {
+    const filtered = images.filter((angel) => {
       const nameMatch = angel.name.toLowerCase().includes(searchTerm.toLowerCase());
       if (!nameMatch) return false;
 
@@ -248,6 +249,30 @@ export function SonnyAngelMain({ toggleLeftBar }) {
 
       return true;
     });
+
+    // Apply sorting
+    const sortBy = filters?.sortBy || "name-asc";
+    const sorted = [...filtered].sort((a, b) => {
+      const cA = collectionsByAngelId[a.id] || { count: 0 };
+      const cB = collectionsByAngelId[b.id] || { count: 0 };
+      const countA = cA.count ?? 0;
+      const countB = cB.count ?? 0;
+
+      switch (sortBy) {
+        case "name-asc":
+          return a.name.localeCompare(b.name);
+        case "name-desc":
+          return b.name.localeCompare(a.name);
+        case "count-desc":
+          return countB - countA;
+        case "count-asc":
+          return countA - countB;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
   }, [images, searchTerm, collectionsByAngelId, filters]);
 
   return (

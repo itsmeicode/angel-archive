@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Box, Grid, Typography, useMediaQuery, Paper, Button, CircularProgress } from "@mui/material";
 import { SonnyAngelCard } from "../components/SonnyAngelCard";
 import { SearchBar } from "../components/SearchBar";
+import { Filter } from "../components/Filter";
 import api from "../src/services/api";
 
 export const ProfilePage = () => {
@@ -13,6 +14,14 @@ export const ProfilePage = () => {
     const [userId, setUserId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [filters, setFilters] = useState({
+        owned: "all",
+        seriesIds: [],
+        fav: false,
+        iso: false,
+        wtt: false,
+        sortBy: "name-asc",
+    });
     const [exportLoading, setExportLoading] = useState({ json: false, csv: false });
     const [exportStatus, setExportStatus] = useState(null);
     const [lastExport, setLastExport] = useState(null);
@@ -53,6 +62,7 @@ export const ProfilePage = () => {
             const angelData = {
                 angels_id: collection.angels.id,
                 angels_name: collection.angels.name,
+                angels_series_id: collection.angels.series_id,
                 angels_image_url: collection.angels.image_url,
                 angels_image_bw_url: collection.angels.image_bw_url,
                 angels_image_opacity_url: collection.angels.image_opacity_url,
@@ -97,10 +107,52 @@ export const ProfilePage = () => {
         setSearchTerm(searchTerm.toLowerCase());
     };
 
-    const filterAngels = (angels) => {
-        return angels.filter((angel) =>
+    const filterAndSortAngels = (angels) => {
+        // First apply search filter
+        let filtered = angels.filter((angel) =>
             angel.angels_name.toLowerCase().includes(searchTerm)
         );
+
+        // Apply other filters
+        filtered = filtered.filter((angel) => {
+            // Ownership filter
+            if (filters?.owned === "owned" && (angel.angel_count ?? 0) <= 0) return false;
+            if (filters?.owned === "unowned" && (angel.angel_count ?? 0) > 0) return false;
+
+            // Series filter
+            if (filters?.seriesIds && filters.seriesIds.length > 0) {
+                if (!filters.seriesIds.includes(angel.angels_series_id)) return false;
+            }
+
+            // Status filters (AND semantics)
+            if (filters?.fav && !angel.is_favorite) return false;
+            if (filters?.iso && !angel.in_search_of) return false;
+            if (filters?.wtt && !angel.willing_to_trade) return false;
+
+            return true;
+        });
+
+        // Apply sorting
+        const sortBy = filters?.sortBy || "name-asc";
+        const sorted = [...filtered].sort((a, b) => {
+            const countA = a.angel_count ?? 0;
+            const countB = b.angel_count ?? 0;
+
+            switch (sortBy) {
+                case "name-asc":
+                    return a.angels_name.localeCompare(b.angels_name);
+                case "name-desc":
+                    return b.angels_name.localeCompare(a.angels_name);
+                case "count-desc":
+                    return countB - countA;
+                case "count-asc":
+                    return countA - countB;
+                default:
+                    return 0;
+            }
+        });
+
+        return sorted;
     };
 
     // Collect all unique angel names from all categories for search autocomplete
@@ -348,7 +400,7 @@ export const ProfilePage = () => {
             ? category.filter((angel) => (angel[countField] ?? 0) > 0)
             : category;
 
-        const filteredAngels = filterAngels(baseList);
+        const filteredAngels = filterAndSortAngels(baseList);
 
         return (
             <Paper elevation={6} sx={angelCategoryStyles}>
@@ -360,34 +412,44 @@ export const ProfilePage = () => {
                         No angels here yet.
                     </Typography>
                 ) : (
-                    <Grid container spacing={3} justifyContent="flex-start">
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: {
+                                xs: "1fr",
+                                sm: "repeat(2, 1fr)",
+                                md: "repeat(3, 1fr)",
+                                lg: "repeat(5, 1fr)",
+                            },
+                            gap: 2,
+                        }}
+                    >
                         {filteredAngels.map((angel) => (
-                            <Grid item key={angel.angels_id} xs={12} sm={6} md={4} lg={3}>
-                                <SonnyAngelCard
-                                    id={angel.angels_id}
-                                    name={angel.angels_name}
-                                    imageColorUrl={angel.angels_image_url}
-                                    imageBwUrl={angel.angels_image_bw_url}
-                                    imageOpacityUrl={angel.angels_image_opacity_url}
-                                    count={angel[countField] ?? 0}
-                                    isFavorite={angel.is_favorite}
-                                    inSearchOf={angel.in_search_of}
-                                    willingToTrade={angel.willing_to_trade}
-                                    onCountChange={(newCount) =>
-                                        countField === "trade_count"
-                                            ? handleTradeCountChange(angel.angels_id, newCount)
-                                            : handleCountChange(angel.angels_id, newCount)
-                                    }
-                                    onBookmarkAdd={(type) => handleBookmarkAdd(type, angel.angels_id)}
-                                    onClearStatus={
-                                        clearType
-                                            ? () => handleBookmarkAdd(clearType, angel.angels_id)
-                                            : undefined
-                                    }
-                                />
-                            </Grid>
+                            <SonnyAngelCard
+                                key={angel.angels_id}
+                                id={angel.angels_id}
+                                name={angel.angels_name}
+                                imageColorUrl={angel.angels_image_url}
+                                imageBwUrl={angel.angels_image_bw_url}
+                                imageOpacityUrl={angel.angels_image_opacity_url}
+                                count={angel[countField] ?? 0}
+                                isFavorite={angel.is_favorite}
+                                inSearchOf={angel.in_search_of}
+                                willingToTrade={angel.willing_to_trade}
+                                onCountChange={(newCount) =>
+                                    countField === "trade_count"
+                                        ? handleTradeCountChange(angel.angels_id, newCount)
+                                        : handleCountChange(angel.angels_id, newCount)
+                                }
+                                onBookmarkAdd={(type) => handleBookmarkAdd(type, angel.angels_id)}
+                                onClearStatus={
+                                    clearType
+                                        ? () => handleBookmarkAdd(clearType, angel.angels_id)
+                                        : undefined
+                                }
+                            />
                         ))}
-                    </Grid>
+                    </Box>
                 )}
             </Paper>
         );
@@ -404,88 +466,137 @@ export const ProfilePage = () => {
             backgroundRepeat: "repeat",
             padding: "20px",
             minHeight: "100vh" }}>
-            <Typography variant="h4" gutterBottom sx={{ color: "white", textAlign: "left", fontWeight: "bold", fontSize: "2.5rem", textShadow: "2px 2px 8px rgba(0, 0, 0, 0.7)", marginBottom: "16px" }}>
+            {/* Welcome Message */}
+            <Typography 
+                variant="h4" 
+                gutterBottom 
+                sx={{ 
+                    color: "white", 
+                    textAlign: "left", 
+                    fontWeight: "bold", 
+                    fontSize: "2rem", 
+                    textShadow: "2px 2px 8px rgba(0, 0, 0, 0.7)", 
+                    marginBottom: "16px" 
+                }}
+            >
                 Welcome, {username ? username : "User"}!
             </Typography>
 
-            <SearchBar options={allProfileAngelNames} onSearch={handleSearch} />
+            <Box
+                sx={{
+                    display: "flex",
+                    flexDirection: { xs: "column", md: "row" },
+                    gap: 3,
+                    alignItems: "flex-start",
+                }}
+            >
+                {/* Left Side - Export Data and Filter Panel */}
+                <Box
+                    sx={{
+                        width: { xs: "100%", md: 320 },
+                        flexShrink: 0,
+                        height: "fit-content",
+                        alignSelf: "flex-start",
+                        position: { md: "sticky" },
+                        top: { md: "20px" },
+                    }}
+                >
+                    {/* Export Data Section */}
+                    <Paper elevation={6} sx={{
+                        ...angelCategoryStyles,
+                        marginBottom: "20px"
+                    }}>
+                        <Typography variant="h5" gutterBottom sx={angelTypographyStyles}>
+                            Export Your Data
+                        </Typography>
+                        <Typography variant="body2" sx={{ marginBottom: "16px", color: "#555" }}>
+                            Download your collection data and activity history. Exports are limited to once per hour.
+                        </Typography>
 
-            <Paper elevation={6} sx={{
-                ...angelCategoryStyles,
-                marginTop: "20px",
-                marginBottom: "20px"
-            }}>
-                <Typography variant="h5" gutterBottom sx={angelTypographyStyles}>
-                    Export Your Data
-                </Typography>
-                <Typography variant="body2" sx={{ marginBottom: "16px", color: "#555" }}>
-                    Download your collection data and activity history. Exports are limited to once per hour.
-                </Typography>
+                        <Grid container spacing={2} justifyContent="center" alignItems="center">
+                            <Grid item xs={12} sm={6} md={12}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    fullWidth
+                                    onClick={() => handleExport('json')}
+                                    disabled={exportLoading.json || exportLoading.csv || (exportStatus && !exportStatus.canExport)}
+                                    sx={{
+                                        padding: "10px 20px",
+                                        fontWeight: "600"
+                                    }}
+                                >
+                                    {exportLoading.json ? (
+                                        <CircularProgress size={24} color="inherit" />
+                                    ) : (
+                                        "Download JSON"
+                                    )}
+                                </Button>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={12}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    fullWidth
+                                    onClick={() => handleExport('csv')}
+                                    disabled={exportLoading.json || exportLoading.csv || (exportStatus && !exportStatus.canExport)}
+                                    sx={{
+                                        padding: "10px 20px",
+                                        fontWeight: "600"
+                                    }}
+                                >
+                                    {exportLoading.csv ? (
+                                        <CircularProgress size={24} color="inherit" />
+                                    ) : (
+                                        "Download CSV"
+                                    )}
+                                </Button>
+                            </Grid>
+                        </Grid>
 
-                <Grid container spacing={2} justifyContent="center" alignItems="center">
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            fullWidth
-                            onClick={() => handleExport('json')}
-                            disabled={exportLoading.json || exportLoading.csv || (exportStatus && !exportStatus.canExport)}
-                            sx={{
-                                padding: "10px 20px",
-                                fontWeight: "600"
-                            }}
-                        >
-                            {exportLoading.json ? (
-                                <CircularProgress size={24} color="inherit" />
-                            ) : (
-                                "Download JSON"
-                            )}
-                        </Button>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            fullWidth
-                            onClick={() => handleExport('csv')}
-                            disabled={exportLoading.json || exportLoading.csv || (exportStatus && !exportStatus.canExport)}
-                            sx={{
-                                padding: "10px 20px",
-                                fontWeight: "600"
-                            }}
-                        >
-                            {exportLoading.csv ? (
-                                <CircularProgress size={24} color="inherit" />
-                            ) : (
-                                "Download CSV"
-                            )}
-                        </Button>
-                    </Grid>
-                </Grid>
+                        {exportError && (
+                            <Typography variant="body2" sx={{ marginTop: "12px", color: "#d32f2f", fontWeight: "500" }}>
+                                {exportError}
+                            </Typography>
+                        )}
 
-                {exportError && (
-                    <Typography variant="body2" sx={{ marginTop: "12px", color: "#d32f2f", fontWeight: "500" }}>
-                        {exportError}
-                    </Typography>
-                )}
+                        {exportStatus && !exportStatus.canExport && (
+                            <Typography variant="body2" sx={{ marginTop: "12px", color: "#f57c00", fontWeight: "500" }}>
+                                Next export available in {exportStatus.timeRemaining} minutes
+                            </Typography>
+                        )}
 
-                {exportStatus && !exportStatus.canExport && (
-                    <Typography variant="body2" sx={{ marginTop: "12px", color: "#f57c00", fontWeight: "500" }}>
-                        Next export available in {exportStatus.timeRemaining} minutes
-                    </Typography>
-                )}
+                        {lastExport && (
+                            <Typography variant="body2" sx={{ marginTop: "12px", color: "#555", fontStyle: "italic" }}>
+                                Last export: {lastExport}
+                            </Typography>
+                        )}
+                    </Paper>
 
-                {lastExport && (
-                    <Typography variant="body2" sx={{ marginTop: "12px", color: "#555", fontStyle: "italic" }}>
-                        Last export: {lastExport}
-                    </Typography>
-                )}
-            </Paper>
+                    {/* Filter Panel */}
+                    <Box
+                        sx={{
+                            bgcolor: "rgba(255,255,255,0.9)",
+                            borderRadius: 2,
+                            boxShadow: 2,
+                            p: 2,
+                        }}
+                    >
+                        <SearchBar options={allProfileAngelNames} onSearch={handleSearch} />
+                        <Box mt={2}>
+                            <Filter onFilterChange={setFilters} />
+                        </Box>
+                    </Box>
+                </Box>
 
-            {renderCategory("Here are the angels you've collected:", angels, "angel_count", true, null)}
-            {renderCategory("Your Favorite Angels:", favorites, "angel_count", false, "FAV")}
-            {renderCategory("Angels You're In Search Of:", inSearchOf, "angel_count", false, "ISO")}
-            {renderCategory("Angels You're Willing To Trade:", willingToTrade, "trade_count", false, "WTT")}
+                {/* Right Side - Content */}
+                <Box sx={{ flexGrow: 1 }}>
+                    {renderCategory("Here are the angels you've collected:", angels, "angel_count", true, null)}
+                    {renderCategory("Your Favorite Angels:", favorites, "angel_count", false, "FAV")}
+                    {renderCategory("Angels You're In Search Of:", inSearchOf, "angel_count", false, "ISO")}
+                    {renderCategory("Angels You're Willing To Trade:", willingToTrade, "trade_count", false, "WTT")}
+                </Box>
+            </Box>
         </Box>
     );
 };

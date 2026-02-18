@@ -32,7 +32,7 @@ export function SearchBar({ options, onSearch }) {
           },
         }}
         sx={{
-          width: { xs: "90%", sm: "60%", md: "40%" },
+          width: "100%",
           "& .MuiInputBase-root": {
             backgroundColor: "pink",
             borderRadius: "8px",
