@@ -5,7 +5,7 @@ A platform for Sonny Angel collectors to **track, trade, and showcase** their co
 
 - [Why Angel Archive Exists](#why-angel-archive-exists)
 - [Technical Overview](#technical-overview)
-- [Image Service (Dynamic Opacity & Profile Images)](#image-service-dynamic-opacity--profile-images)
+- [Image Service (Optional)](#image-service-optional)
 - [Data Pipeline (Scraper)](#data-pipeline-scraper)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
@@ -47,13 +47,12 @@ Angel Archive is built as a multi-service application with a focus on performanc
 - Maintains a catalog of all figures and series with detailed metadata and images
 - Tracks user-owned, in-search-of, and trade-list items  
 - Handles trading and community interactions  
-- Coordinates with the scraper and image service  
+- Serves image URLs from storage; catalog data is populated by the scraper  
 
 ### Frontend — React + Material UI
 - Framework: **React**  
 - Component Library: **Material UI (MUI)**  
-- State Management: **Redux Toolkit**  
-- Styling: MUI + CSS Modules  
+- Styling: MUI + CSS  
 - Responsive UI with lazy-loaded images  
 
 **Responsibilities:**
@@ -64,38 +63,33 @@ Angel Archive is built as a multi-service application with a focus on performanc
 
 ---
 
-## Image Service (Dynamic Opacity & Profile Images)
-The **Image Service** is a dedicated FastAPI microservice built to support Angel Archive’s **interactive collector UI**.
+## Image Service (Optional)
+A separate FastAPI microservice in `image-service/` can generate image variants (opacity, grayscale, circular crop) via HTTP API. **The main app does not use it at runtime.** The frontend and backend serve pre-generated image URLs from the database and storage.
 
-**Purpose:**  
-Instead of storing multiple static versions of images, this service dynamically generates visual variants to reflect ownership and interaction:
-
-- **100% opacity** → user owns the figure  
-- **50% opacity (hover state)** → user does not own the figure but is interacting with it  
-- **0% opacity** → user does not own the figure  
-- **Circular crop** → profile pictures for users  
-
-**Key Features:**
-- Dynamic opacity adjustment based on ownership and interaction  
-- Circular image generation for profile display  
-- Optional grayscale variants for UI styling  
-- Batch processing for multiple images or entire series  
-- Memory-efficient streaming for fast delivery  
-
-This ensures the UI always accurately reflects the user’s collection in real time.
+Image variants are produced by the **scraper** using `scraper/process_images.py` (Pillow) — grayscale, 50% opacity, and circular profile crops — then uploaded to storage and referenced in PostgreSQL. The image service provides the same transformations as an optional API for future or external use.
 
 ---
 
 ## Data Pipeline (Scraper)
-A custom Python scraper populates and maintains the figure catalog.
+A custom Python scraper populates and maintains the figure catalog. Run from the `scraper/` directory.
+
+### Pipeline: Discover → Scrape → Process
+
+| Step | Script | Output |
+|------|--------|--------|
+| **1. Discover** | `python discover_galleries.py` | `gallery_config.json` — series and gallery IDs from the official site |
+| **2. Scrape** | `python scrape_images.py` | `images/{series_name}_Series/` — raw PNGs per series |
+| **3. Process** | `python process_images.py` | `images_bw/`, `images_opacity/`, `images_profile_pic/` — grayscale, 50% opacity, circular crops |
+
+After processing, upload the generated folders to storage and load figure metadata into PostgreSQL (via backend/DB tooling or scripts) so the app can serve catalog and image URLs.
 
 **Responsibilities:**
 - Discover official Sonny Angel galleries  
 - Scrape figure metadata and images  
-- Send images to the image service for processing  
-- Normalize and load data into PostgreSQL  
+- Process images locally (grayscale, opacity, circular crop)  
+- Upload processed images to storage and load metadata into PostgreSQL  
 
-**Tech stack:** Python, Requests, BeautifulSoup4, scheduled tasks.
+**Tech stack:** Python, Requests, BeautifulSoup4, Pillow, scheduled tasks.
 
 ---
 
@@ -108,7 +102,7 @@ angel-archive/
 │ └── tests/         # Backend tests
 ├── frontend/        # React + Material UI
 ├── scraper/         # Scraping scripts
-└── image-service/   # Image processing microservice
+└── image-service/   # Optional: image processing API (scraper uses process_images.py instead)
 ```
 
 ## Testing
@@ -116,7 +110,7 @@ angel-archive/
 ### Backend Tests
 - API endpoint tests (pytest)  
 - Database integration tests  
-- Image processing validation  
+- Angel and image-URL endpoint tests  
 - Middleware behavior (rate limiting, audit logs)  
 
 **Run with:**
@@ -133,8 +127,8 @@ pytest
 **Run with:**
 ```bash
 cd frontend
-npm run test        # watch mode
-npm run test:run    # single run
+npm run test          # watch mode
+npm run test:run      # single run
 npm run test:coverage
 ```
 
@@ -162,22 +156,17 @@ npm install
 npm run dev
 ```
 
-### 4. Image Service Setup
-```bash
-cd image-service
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+### 4. Scraper (optional)
+To populate the figure catalog: discover galleries, then scrape images, then process them (see [Data Pipeline](#data-pipeline-scraper)).
 
-### 5. Scraper Setup
 ```bash
 cd scraper
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python discover_galleries.py
+python discover_galleries.py   # 1. Discover → gallery_config.json
+python scrape_images.py        # 2. Scrape → images/{series}/
+python process_images.py       # 3. Process → images_bw/, images_opacity/, images_profile_pic/
 ```
 
 ## Architecture Diagram
@@ -188,24 +177,20 @@ flowchart TD
     A[Scraper: Python + BeautifulSoup
 Discover galleries
 Extract metadata
-Download raw images] -->|1. Metadata + images| B[Backend API: FastAPI]
+Download raw images] -->|1. Raw images| P[process_images.py: Pillow
+Grayscale / Opacity / Circular crop]
 
-    %% Backend
-    B -->|2. Insert/Update Data| C[(PostgreSQL DB: Series, Figures, Collections, Trades)]
+    P -->|2. Processed files| E[(Image Storage: Original + Variants)]
 
-    %% Image Service
-    B -->|3. Send raw images| D[Image Service: FastAPI + Pillow
-Opacity: 0%/50%/100%
-Circular profile
-Grayscale]
+    A -->|3. Metadata| B[Backend API: FastAPI]
 
-    D -->|4. Store variants| E[(Image Storage: Original + Processed)]
+    B -->|4. Insert/Update Data| C[(PostgreSQL DB: Series, Figures, Collections, Trades)]
 
     %% Frontend
-    B -->|5. API: Figure data + image URLs| F[Frontend: React + Material UI + Redux
+    B -->|5. API: Figure data + image URLs| F[Frontend: React + Material UI
 Catalog Browsing
 Opacity States
 Collections]
 
-    D -->|Images served to UI| F
+    E -->|URLs from DB paths| B
 ```
