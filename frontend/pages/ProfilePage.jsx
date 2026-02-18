@@ -215,11 +215,11 @@ export const ProfilePage = () => {
                 next.is_favorite = !currentState.is_favorite;
                 break;
             case "ISO":
+                // Toggle ISO; keep current count so owned angels stay colored with count (e.g. want 2, have 1)
                 if (currentState.in_search_of) {
                     next.in_search_of = false;
                 } else {
                     next.in_search_of = true;
-                    next.count = 0;
                     next.trade_count = 0;
                     next.willing_to_trade = false;
                 }
@@ -268,9 +268,7 @@ export const ProfilePage = () => {
             willing_to_trade: !!current.willing_to_trade,
         };
 
-        if ((newCount ?? 0) > 0) {
-            next.in_search_of = false;
-        }
+        // ISO is not auto-removed when adding count — user may want 2+ and will clear ISO manually when done.
         if ((newCount ?? 0) === 0) {
             next.willing_to_trade = false;
             next.trade_count = 0;

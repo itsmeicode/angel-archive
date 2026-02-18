@@ -155,12 +155,11 @@ export function SonnyAngelMain({ toggleLeftBar }) {
         next.is_favorite = !current.is_favorite;
         break;
       case "ISO":
-        // ISO means user does NOT own it
+        // Toggle ISO; keep current count so owned angels stay colored with count (e.g. want 2, have 1)
         if (current.in_search_of) {
           next.in_search_of = false;
         } else {
           next.in_search_of = true;
-          next.count = 0;
           next.trade_count = 0;
           next.willing_to_trade = false;
         }
@@ -199,10 +198,7 @@ export function SonnyAngelMain({ toggleLeftBar }) {
 
     let next = { ...current, count: newCount };
 
-    // If user now owns it, ISO must be removed.
-    if ((newCount ?? 0) > 0) {
-      next.in_search_of = false;
-    }
+    // ISO is not auto-removed when adding count — user may want 2+ and will clear ISO manually when done.
 
     // If user no longer owns it, cannot be WTT.
     if ((newCount ?? 0) === 0) {
