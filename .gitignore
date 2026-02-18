@@ -29,6 +29,7 @@ ENV/
 htmlcov/
 .tox/
 .nox/
+frontend/coverage/
 
 # IDE
 .idea/

@@ -240,10 +240,14 @@ export function SonnyAngelMain({ toggleLeftBar }) {
         if (!filters.seriesIds.includes(angel.series_id)) return false;
       }
 
-      // Status filters (AND semantics)
-      if (filters?.fav && !c.is_favorite) return false;
-      if (filters?.iso && !c.in_search_of) return false;
-      if (filters?.wtt && !c.willing_to_trade) return false;
+      // Status filters (OR semantics: if multiple selected, show items matching any)
+      const statusFilters = [];
+      if (filters?.fav) statusFilters.push(c.is_favorite);
+      if (filters?.iso) statusFilters.push(c.in_search_of);
+      if (filters?.wtt) statusFilters.push(c.willing_to_trade);
+      
+      // If any status filters are active, item must match at least one
+      if (statusFilters.length > 0 && !statusFilters.some(Boolean)) return false;
 
       return true;
     });
