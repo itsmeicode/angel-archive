@@ -7,38 +7,39 @@ from datetime import datetime
 class TestAuditRoutes:
     """Test audit log endpoints."""
 
-    def test_get_all_audit_logs(self, client, mock_supabase_admin):
+    @patch("app.routers.audit.get_supabase_admin")
+    def test_get_all_audit_logs(self, mock_get_supabase_admin, client):
         """Test fetching all audit logs."""
         mock_logs = [
             {
                 "id": 1,
-                "user_id": "user-123",
+                "user_id": "00000000-0000-0000-0000-000000000001",
                 "action": "login",
                 "details": {"ip": "127.0.0.1"},
                 "created_at": "2024-01-01T00:00:00Z"
             },
             {
                 "id": 2,
-                "user_id": "user-456",
+                "user_id": "00000000-0000-0000-0000-000000000002",
                 "action": "collection_update",
                 "details": {"angel_id": 1},
                 "created_at": "2024-01-01T01:00:00Z"
             }
         ]
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=mock_logs
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.range.return_value.execute.return_value = MagicMock(data=mock_logs)
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/audit")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
         assert data[0]["action"] == "login"
 
-    def test_get_audit_logs_by_user(self, client, mock_supabase_admin):
+    @patch("app.routers.audit.get_supabase_admin")
+    def test_get_audit_logs_by_user(self, mock_get_supabase_admin, client):
         """Test fetching audit logs for a specific user."""
-        user_id = "user-123"
+        user_id = "00000000-0000-0000-0000-000000000001"
         mock_logs = [
             {
                 "id": 1,
@@ -48,40 +49,35 @@ class TestAuditRoutes:
                 "created_at": "2024-01-01T00:00:00Z"
             }
         ]
-        
-        mock_supabase_admin.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=mock_logs
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=mock_logs)
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get(f"/api/audit/user/{user_id}")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
         assert data[0]["user_id"] == user_id
 
-    def test_get_audit_stats(self, client, mock_supabase_admin):
+    @patch("app.routers.audit.get_supabase_admin")
+    def test_get_audit_stats(self, mock_get_supabase_admin, client):
         """Test fetching audit statistics."""
-        mock_stats = [
-            {"action": "login", "count": 100},
-            {"action": "logout", "count": 95},
-            {"action": "collection_update", "count": 250}
-        ]
-        
-        mock_supabase_admin.table.return_value.select.return_value.execute.return_value = MagicMock(
-            data=mock_stats
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.execute.return_value = MagicMock(data=[], count=0)
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/audit/stats")
         assert response.status_code == 200
 
-    def test_get_audit_logs_with_limit(self, client, mock_supabase_admin):
+    @patch("app.routers.audit.get_supabase_admin")
+    def test_get_audit_logs_with_limit(self, mock_get_supabase_admin, client):
         """Test fetching audit logs with custom limit."""
         mock_logs = [{"id": i, "action": "test"} for i in range(5)]
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=mock_logs
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.range.return_value.execute.return_value = MagicMock(data=mock_logs)
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/audit?limit=5")
         assert response.status_code == 200
         data = response.json()

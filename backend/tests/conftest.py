@@ -31,9 +31,9 @@ def mock_supabase_admin():
 
 @pytest.fixture
 def sample_user():
-    """Sample user data"""
+    """Sample user data (id is a valid UUID for Supabase/PostgREST)"""
     return {
-        "id": "test-user-123",
+        "id": "00000000-0000-0000-0000-000000000001",
         "email": "test@example.com",
         "username": "testuser",
         "profile_pic": None,
@@ -47,7 +47,6 @@ def sample_angel():
     return {
         "id": 1,
         "name": "Test Angel",
-        "card_number": "001",
         "series_id": 1,
         "image": "test/image.png",
         "image_bw": "test/image_bw.png",
@@ -62,9 +61,10 @@ def sample_collection():
     """Sample collection data"""
     return {
         "id": 1,
-        "user_id": "test-user-123",
+        "user_id": "00000000-0000-0000-0000-000000000001",
         "angel_id": 1,
         "count": 2,
+        "trade_count": 0,
         "is_favorite": True,
         "in_search_of": False,
         "willing_to_trade": False,

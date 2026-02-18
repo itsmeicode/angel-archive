@@ -13,7 +13,6 @@ class TestCollectionsEndpoints:
             "angels": {
                 "id": 1,
                 "name": "Test Angel",
-                "card_number": "001",
                 "series_id": 1,
                 "image": "test/image.png",
                 "image_bw": None,
@@ -56,6 +55,7 @@ class TestCollectionsEndpoints:
             json={
                 "angel_id": 1,
                 "count": 2,
+                "trade_count": 0,
                 "is_favorite": True,
                 "in_search_of": False,
                 "willing_to_trade": False,

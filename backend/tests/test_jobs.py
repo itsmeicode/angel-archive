@@ -6,119 +6,109 @@ from unittest.mock import MagicMock, patch, AsyncMock
 class TestJobRoutes:
     """Test job management endpoints."""
 
-    def test_trigger_job_success(self, client, mock_supabase_admin):
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_trigger_job_success(self, mock_get_supabase_admin, client):
         """Test manually triggering a job."""
-        mock_supabase_admin.table.return_value.insert.return_value.execute.return_value = MagicMock(
-            data=[{"id": 1, "status": "running"}]
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.insert.return_value.execute.return_value = MagicMock(data=[{"id": 1, "status": "running"}])
+        # update_job_run fetches started_at then updates
+        mock_sb.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+            data={"started_at": "2024-01-01T00:00:00Z"}
         )
-        
+        mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[{"id": 1}])
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.post("/api/jobs/trigger")
         assert response.status_code in [200, 202, 503]  # May be disabled in test mode
 
-    def test_get_job_history(self, client, mock_supabase_admin):
-        """Test fetching job history."""
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_get_job_history(self, mock_get_supabase_admin, client):
+        """Test fetching job history. API returns { success, jobs, cron }."""
         mock_jobs = [
-            {
-                "id": 1,
-                "job_type": "asset_pipeline",
-                "status": "completed",
-                "started_at": "2024-01-01T00:00:00Z",
-                "completed_at": "2024-01-01T00:05:00Z",
-                "images_processed": 10,
-                "errors": None
-            },
-            {
-                "id": 2,
-                "job_type": "asset_pipeline",
-                "status": "completed",
-                "started_at": "2024-01-02T00:00:00Z",
-                "completed_at": "2024-01-02T00:03:00Z",
-                "images_processed": 5,
-                "errors": None
-            }
+            {"id": 1, "job_name": "asset_pipeline", "status": "success", "started_at": "2024-01-01T00:00:00Z", "completed_at": "2024-01-01T00:05:00Z", "images_processed": 10, "error_message": None},
+            {"id": 2, "job_name": "asset_pipeline", "status": "success", "started_at": "2024-01-02T00:00:00Z", "completed_at": "2024-01-02T00:03:00Z", "images_processed": 5, "error_message": None},
         ]
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=mock_jobs
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=mock_jobs)
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/jobs/status")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
+        assert data["success"] is True
+        assert len(data["jobs"]) == 2
+        assert "cron" in data
 
-    def test_get_job_history_with_limit(self, client, mock_supabase_admin):
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_get_job_history_with_limit(self, mock_get_supabase_admin, client):
         """Test fetching job history with custom limit."""
-        mock_jobs = [{"id": i} for i in range(5)]
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=mock_jobs
-        )
-        
+        mock_jobs = [{"id": i, "job_name": "asset_pipeline", "status": "success"} for i in range(5)]
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=mock_jobs)
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/jobs/status?limit=5")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 5
+        assert len(data["jobs"]) == 5
 
-    def test_get_latest_job(self, client, mock_supabase_admin):
-        """Test fetching the latest job run."""
-        mock_job = {
-            "id": 1,
-            "job_type": "asset_pipeline",
-            "status": "completed",
-            "started_at": "2024-01-01T00:00:00Z",
-            "completed_at": "2024-01-01T00:05:00Z",
-            "images_processed": 10,
-            "errors": None
-        }
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=[mock_job]
-        )
-        
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_get_latest_job(self, mock_get_supabase_admin, client):
+        """Test fetching the latest job run. API returns { success, job }."""
+        mock_job = {"id": 1, "job_name": "asset_pipeline", "status": "success", "started_at": "2024-01-01T00:00:00Z", "completed_at": "2024-01-01T00:05:00Z", "images_processed": 10, "error_message": None}
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=[mock_job])
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/jobs/latest")
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == 1
+        assert data["success"] is True
+        assert data["job"]["id"] == 1
 
-    def test_get_latest_job_none_found(self, client, mock_supabase_admin):
-        """Test getting latest job when none exist."""
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=[]
-        )
-        
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_get_latest_job_none_found(self, mock_get_supabase_admin, client):
+        """Test getting latest job when none exist. API returns 200 with job: None."""
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/jobs/latest")
-        assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert data["job"] is None
 
     def test_get_cron_status(self, client):
-        """Test getting cron scheduler status."""
+        """Test getting cron scheduler status. API returns { success, cron }."""
         response = client.get("/api/jobs/cron")
         assert response.status_code == 200
         data = response.json()
-        assert "enabled" in data
-        assert "running" in data
+        assert data["success"] is True
+        assert "cron" in data
+        assert "enabled" in data["cron"]
+        assert "running" in data["cron"]
 
-    def test_job_with_errors(self, client, mock_supabase_admin):
-        """Test job run with errors."""
+    @patch("app.services.job_service.get_supabase_admin")
+    def test_job_with_errors(self, mock_get_supabase_admin, client):
+        """Test job run with errors. Schema uses error_message (string), not errors."""
         mock_job = {
             "id": 1,
-            "job_type": "asset_pipeline",
+            "job_name": "asset_pipeline",
             "status": "failed",
             "started_at": "2024-01-01T00:00:00Z",
             "completed_at": "2024-01-01T00:01:00Z",
             "images_processed": 0,
-            "errors": ["Failed to connect to image service", "Timeout on file upload"]
+            "error_message": "Failed to connect to image service",
         }
-        
-        mock_supabase_admin.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=[mock_job]
-        )
-        
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(data=[mock_job])
+        mock_get_supabase_admin.return_value = mock_sb
+
         response = client.get("/api/jobs/latest")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "failed"
-        assert len(data["errors"]) == 2
+        assert data["job"]["status"] == "failed"
+        assert data["job"]["error_message"] == "Failed to connect to image service"
 
 
 class TestCronManager:
