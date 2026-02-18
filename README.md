@@ -126,14 +126,16 @@ pytest
 ```
 
 ### Frontend Tests
-- Component tests (React Testing Library)  
-- Integration tests (End-to-end)  
-- Accessibility tests (a11y)  
+- **Vitest** + **React Testing Library** for unit/component tests  
+- Custom render with MUI `ThemeProvider` and React Router in `src/test/utils.jsx`  
+- Example tests: `components/Counter.test.jsx`, `components/SearchBar.test.jsx`  
 
 **Run with:**
 ```bash
 cd frontend
-npm test
+npm run test        # watch mode
+npm run test:run    # single run
+npm run test:coverage
 ```
 
 ## Quick Start
