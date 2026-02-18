@@ -62,15 +62,28 @@ export function SonnyAngelCard({
 
       {showBookmarkOptions && (
         <div className="bookmark-options">
-          {["FAV", "ISO", "WTT"].map((type) => (
-            <button
-              key={type}
-              className="bookmark-btn"
-              onClick={() => handleBookmarkClick(type)}
-            >
-              {type}
-            </button>
-          ))}
+          {["FAV", "ISO", "WTT"].map((type) => {
+            const owned = (Number(count) || 0) > 0;
+            const disabled =
+              (type === "FAV" && !owned) ||
+              (type === "WTT" && !owned);
+            const title = type === "FAV" && !owned
+              ? "Add at least one to favorite"
+              : type === "WTT" && !owned
+                ? "Add at least one to trade"
+                : undefined;
+            return (
+              <button
+                key={type}
+                className="bookmark-btn"
+                onClick={() => !disabled && handleBookmarkClick(type)}
+                disabled={disabled}
+                title={title}
+              >
+                {type}
+              </button>
+            );
+          })}
         </div>
       )}
 

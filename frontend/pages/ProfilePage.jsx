@@ -212,6 +212,8 @@ export const ProfilePage = () => {
 
         switch (type) {
             case "FAV":
+                // FAV only for owned angels (count > 0)
+                if ((currentState.count ?? 0) <= 0 && !currentState.is_favorite) return;
                 next.is_favorite = !currentState.is_favorite;
                 break;
             case "ISO":
@@ -272,6 +274,7 @@ export const ProfilePage = () => {
         if ((newCount ?? 0) === 0) {
             next.willing_to_trade = false;
             next.trade_count = 0;
+            next.is_favorite = false;
         }
 
         if ((next.trade_count ?? 0) > (next.count ?? 0)) {

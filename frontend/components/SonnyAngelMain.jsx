@@ -151,7 +151,8 @@ export function SonnyAngelMain({ toggleLeftBar }) {
 
     switch (type) {
       case "FAV":
-        // FAV can be owned or not; it does not change count
+        // FAV only for owned angels (count > 0)
+        if ((current.count ?? 0) <= 0 && !current.is_favorite) return;
         next.is_favorite = !current.is_favorite;
         break;
       case "ISO":
@@ -200,10 +201,11 @@ export function SonnyAngelMain({ toggleLeftBar }) {
 
     // ISO is not auto-removed when adding count — user may want 2+ and will clear ISO manually when done.
 
-    // If user no longer owns it, cannot be WTT.
+    // If user no longer owns it, remove WTT and FAV.
     if ((newCount ?? 0) === 0) {
       next.willing_to_trade = false;
       next.trade_count = 0;
+      next.is_favorite = false;
     }
 
     // Clamp trade_count to owned count

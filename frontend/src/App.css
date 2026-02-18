@@ -26,7 +26,7 @@ html, body, #root {
 }
 
 .name {
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: bold;
   color: #333;
   text-align: center;
@@ -91,8 +91,14 @@ html, body, #root {
   transition: background 0.2s ease;
 }
 
-.bookmark-btn:hover {
+.bookmark-btn:hover:not(:disabled) {
   background: #f1f1f1;
+}
+
+.bookmark-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #999;
 }
 
 .sonny-angel-status-strip {
